@@ -12,9 +12,15 @@ type BCT_Node struct {
 
 func sendGoToAll(n *BCT_Node, g *gc.Graph) {
 	for i := 0; i < len(n.Neighbors()); i++ {
-		g.Msgs <- gc.Message{Name:"go", Sender: n.Id()}
-		g.Wg.Add(1)
-		go BroadcastTraversalRunner(n.Neighbors()[i].(*BCT_Node), g)
+		other := n.Neighbors()[i]
+		edgeIndex := g.FindEdge(n, other)
+		if edgeIndex >= 0 {
+			g.Wg.Add(1)
+			g.Edges[edgeIndex].Send(gc.Message{Name:"go", Sender: n.Id()})
+			go BroadcastTraversalRunner(other.(*BCT_Node), n.Id(), g)
+		} else {
+			fmt.Println("NOOOOOOO")
+		}
 	}
 }
 

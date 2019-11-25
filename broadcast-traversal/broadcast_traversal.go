@@ -1,11 +1,11 @@
 package broadcasttraversal
 
 import (
-	"sync"
-	gc "github.com/alexmat2on/go-dist/graph-core"
-	"math/rand"
-	"time"
 	"fmt"
+	"sync"
+	"time"
+	"math/rand"
+	gc "github.com/alexmat2on/go-dist/graph-core"
 )
 
 // Generate a random graph of processing nodes
@@ -17,7 +17,7 @@ func genGraph(g *gc.Graph, numNodes int, maxNeighbors int, wg *sync.WaitGroup) {
 	g.Wg = wg
 	g.Msgs = make(chan gc.Message, numNodes)
 	g.Nodes = make(map[int]gc.NodeIfc)
-	g.Edges = make(map[int][]gc.NodeIfc)
+	g.Edges = make([]gc.Edge, 0)
 
 	if numNodes < 1 || maxNeighbors < 1 {
 		fmt.Println("ERROR: Not enough nodes/neighbors")
@@ -27,11 +27,13 @@ func genGraph(g *gc.Graph, numNodes int, maxNeighbors int, wg *sync.WaitGroup) {
 		fmt.Println("ERROR: Too many neighbors")
 	}
 
+	// Create a new set of nodes
 	newNodes := make([]BCT_Node, numNodes)
 	for i := 0; i < numNodes; i++ {
 		newNodes[i] = BCT_Node{Node: gc.InitNode(i + 1), visited: false}
 	}
 
+	// Generate random edge connections between the nodes
 	for i := 0; i < numNodes; i++ {
 		numNeighbors := rand.Intn(maxNeighbors) + 1 // an int: 1 <= nn <= maxNeigh
 		newNeighbors := rand.Perm(numNodes) // slice of ints in random order
@@ -42,6 +44,7 @@ func genGraph(g *gc.Graph, numNodes int, maxNeighbors int, wg *sync.WaitGroup) {
 				res := g.AddEdge(&newNodes[i], &newNodes[neighborIndex])
 				if res < 0 {
 					// We added an edge that already exists, try again 
+					// We want to check this scenario to guarantee a connected graph
 					numNeighbors = (numNeighbors + 1) % numNodes // in the case that numNeighbors is increased past the number of nodes...
 				}
 			} else {
@@ -52,11 +55,23 @@ func genGraph(g *gc.Graph, numNodes int, maxNeighbors int, wg *sync.WaitGroup) {
 	}
 } 
 
-func BroadcastTraversalRunner(n *BCT_Node, g *gc.Graph) {
-	m := <-g.Msgs
-	switch m.Name {
+func BroadcastTraversalRunner(n *BCT_Node, senderId int, g *gc.Graph) {
+	var msg gc.Message
+	if senderId > 0 {
+		sender := g.Nodes[senderId]
+		edgeIndex := g.FindEdge(n, sender)
+		if edgeIndex >= 0 {
+			msg = g.Edges[edgeIndex].Receive()
+		} else {
+			fmt.Println("NOOOOOOO")
+		}
+	} else {
+		msg = <-g.Msgs
+	}
+
+	switch msg.Name {
 	case "start": n.StartMsg(g)
-	case "go": n.GoMsg(g, &m)
+	case "go": n.GoMsg(g, &msg)
 	}
 
 	g.Wg.Done()
@@ -74,7 +89,7 @@ func BroadcastTraversal() {
 	g.Msgs <- gc.Message{Name:"start", Sender:0}
 
 	g.Wg.Add(1)
-	go BroadcastTraversalRunner(g.Nodes[1].(*BCT_Node), &g)
+	go BroadcastTraversalRunner(g.Nodes[rand.Intn(len(g.Nodes)) + 1].(*BCT_Node), 0, &g)
 	
 	g.Wg.Wait()
 }
