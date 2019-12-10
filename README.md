@@ -4,7 +4,7 @@ A selection of distributed algorithms, implemented in Go. The subpackage `graph-
 These algorithms are implemented as described by their pseudocode counterparts in the book *Distributed Algorithms for Message-Passing Systems* by Michel Raynal. 
 
 ## Algorithms
-* `broadcast-traversal`: Parallel Traversal via flooding 
+* `parallel-traversal`: Parallel Traversal via flooding 
 
 ## Build 
 

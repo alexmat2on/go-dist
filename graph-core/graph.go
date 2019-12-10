@@ -2,6 +2,7 @@ package graphcore
 
 import (
 	"sync"
+	"fmt"
 )
 
 // A Graph that represents a network of Nodes. Nodes have private local data, and should
@@ -23,13 +24,21 @@ func (g *Graph) AddEdge(node1 NodeIfc, node2 NodeIfc) int {
 		return -1
 	}
 
-	node1.AddNeighbor(node2)
+	addingItself := node1.Id() == node2.Id()
+	enoughNeighborSpace := len(node1.Neighbors()) < node1.Degree() && len(node2.Neighbors()) < node2.Degree()
+
 	g.addNode(node1)
 	g.addNode(node2)
 
-	e := Edge{n1: node1, n2: node2, comms: make(chan Message, 5), weight: 0}
-	g.Edges = append(g.Edges, e)
+	fmt.Printf("\nHMMM: %b, %b\n%+v, %+v\n", addingItself, enoughNeighborSpace, len(node1.Neighbors()), len(node2.Neighbors()))
 
+	if !addingItself && enoughNeighborSpace {
+		node1.AddNeighbor(node2)
+		node2.AddNeighbor(node1)
+	
+		e := Edge{n1: node1, n2: node2, comms: make(chan Message, 5), weight: 0}
+		g.Edges = append(g.Edges, e)	
+	}
 	return 0
 }
 
@@ -43,4 +52,11 @@ func (g *Graph) FindEdge(node1 NodeIfc, node2 NodeIfc) int {
 		}
 	}
 	return ret
+}
+
+func (g *Graph) PrintEdges() {
+	for i := 0; i < len(g.Edges); i++ {
+		fmt.Printf("{%d, %d}, ", g.Edges[i].n1.Id(), g.Edges[i].n2.Id())
+	}
+	fmt.Println()
 }

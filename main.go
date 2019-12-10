@@ -1,9 +1,9 @@
 package main
 
 import (
-	bct "github.com/alexmat2on/go-dist/broadcast-traversal"
+	pt "github.com/alexmat2on/go-dist/parallel-traversal"
 )
 
 func main() {
-	bct.BroadcastTraversal()
+	pt.ParallelTraversal()
 }
